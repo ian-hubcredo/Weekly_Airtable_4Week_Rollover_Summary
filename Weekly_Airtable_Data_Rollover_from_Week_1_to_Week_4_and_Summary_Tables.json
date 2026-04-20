@@ -1,0 +1,666 @@
+{
+  "name": "Weekly Airtable Data Rollover from Week 1 to Week 4 and Summary Tables",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtHour": 23,
+              "triggerAtMinute": 59
+            }
+          ]
+        }
+      },
+      "id": "017b5b54-7bb0-4eff-81a8-b9033ae996d0",
+      "name": "Every Sunday",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -448,
+        72
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "parentTables",
+              "value": "[\"McKenzie\", \"Parent2\", \"Parent3\", \"Parent4\", \"Parent5\", \"Parent6\", \"Parent7\", \"Parent8\"]",
+              "type": "array"
+            },
+            {
+              "id": "id-2",
+              "name": "baseId",
+              "value": "<__PLACEHOLDER_VALUE__Your Airtable Base ID__>",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "archiveTableId",
+              "value": "<__PLACEHOLDER_VALUE__Archive Table ID__>",
+              "type": "string"
+            },
+            {
+              "id": "id-4",
+              "name": "monthlySummaryTableId",
+              "value": "<__PLACEHOLDER_VALUE__Monthly Summary Table ID__>",
+              "type": "string"
+            },
+            {
+              "id": "id-5",
+              "name": "masterSummaryTableId",
+              "value": "<__PLACEHOLDER_VALUE__Master Summary Table ID__>",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "2a0856d5-f9ab-4571-997f-9161b87e3326",
+      "name": "Workflow Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -224,
+        72
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the parent tables array from the configuration\nconst parentTables = $input.first().json.parentTables;\n\n// Create an array of items, one for each parent table\nconst items = parentTables.map(tableName => ({\n  json: {\n    parentTable: tableName,\n    baseId: $input.first().json.baseId,\n    archiveTableId: $input.first().json.archiveTableId,\n    monthlySummaryTableId: $input.first().json.monthlySummaryTableId,\n    masterSummaryTableId: $input.first().json.masterSummaryTableId\n  }\n}));\n\nreturn items;"
+      },
+      "id": "d06d52fd-c08f-46f2-b06e-fe1c91147e43",
+      "name": "Create Parent Table List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Process each parent table and create table IDs for Week 1-4\nconst parentTable = $input.item.json.parentTable;\nconst baseId = $input.item.json.baseId;\n\n// Create table IDs based on parent table name\nconst week1TableId = `${parentTable}_Week1`;\nconst week2TableId = `${parentTable}_Week2`;\nconst week3TableId = `${parentTable}_Week3`;\nconst week4TableId = `${parentTable}_Week4`;\n\nreturn {\n  parentTable: parentTable,\n  baseId: baseId,\n  week1TableId: week1TableId,\n  week2TableId: week2TableId,\n  week3TableId: week3TableId,\n  week4TableId: week4TableId,\n  archiveTableId: $input.item.json.archiveTableId,\n  monthlySummaryTableId: $input.item.json.monthlySummaryTableId,\n  masterSummaryTableId: $input.item.json.masterSummaryTableId\n};"
+      },
+      "id": "58ad8c08-10f2-4e6e-8398-3c66f70b0a85",
+      "name": "Process Single Parent Table",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.baseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.week4TableId }}"
+        },
+        "options": {}
+      },
+      "id": "057555ee-753a-4dc3-a86f-536d62da353c",
+      "name": "Get Week 4 Data",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.baseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.archiveTableId }}"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "parentTable": "={{ $('Process Single Parent Table').item.json.parentTable }}",
+            "archivedDate": "={{ $now.toISO() }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "5c239058-c34f-40c9-b79c-2cbf5f0deddd",
+      "name": "Archive Week 4 to Archive Table",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.baseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Process Single Parent Table').item.json.week3TableId }}"
+        },
+        "options": {}
+      },
+      "id": "4f0bd8ff-c387-40b5-8d8a-65ffcb88fa1a",
+      "name": "Get Week 3 Data",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        896,
+        72
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.baseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Process Single Parent Table').item.json.week4TableId }}"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": null
+        },
+        "options": {}
+      },
+      "id": "97927946-9f44-46f9-8d6f-3c3bf36cb4ae",
+      "name": "Update Week 4 with Week 3",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1120,
+        72
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.baseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Process Single Parent Table').item.json.week3TableId }}"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "0c10b8eb-4179-41d3-9ba5-fe922a495917",
+      "name": "Clear Week 3",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1344,
+        72
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.baseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Process Single Parent Table').item.json.week2TableId }}"
+        },
+        "options": {}
+      },
+      "id": "0d990fa8-b4c3-4d3d-b2e7-4c5ab498caa5",
+      "name": "Get Week 2 Data",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1568,
+        72
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.baseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Process Single Parent Table').item.json.week3TableId }}"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "id": "={{ $json.id }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "84c53df0-26bf-4396-8fc9-3dae8742cbe1",
+      "name": "Update Week 3 with Week 2",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1792,
+        72
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.baseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Process Single Parent Table').item.json.week2TableId }}"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "a6804877-7cad-4352-acea-272b7efd1db9",
+      "name": "Clear Week 2",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2016,
+        72
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.baseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Process Single Parent Table').item.json.week1TableId }}"
+        },
+        "options": {}
+      },
+      "id": "1536d787-be75-4d6f-8017-0a9f9e0dd2d6",
+      "name": "Get Week 1 Data",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2240,
+        72
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.baseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Process Single Parent Table').item.json.week2TableId }}"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": null
+        },
+        "options": {}
+      },
+      "id": "89d96309-1650-47b7-9e22-fa4d196437bd",
+      "name": "Update Week 2 with Week 1",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2464,
+        72
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.baseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Process Single Parent Table').item.json.week1TableId }}"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "3df518b0-3c07-455c-bb87-a6a8ccd19c93",
+      "name": "Clear Week 1",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2688,
+        72
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate data from all parent tables for monthly and master summaries\nconst items = $input.all();\nconst config = $('Workflow Configuration').item.json;\n\n// Initialize aggregation objects\nconst monthlySummary = {};\nconst masterSummary = {};\n\n// Process each item from the archived data\nfor (const item of items) {\n  const data = item.json;\n  const parentTable = data.parentTable || 'Unknown';\n  \n  // Aggregate for monthly summary (current month's data)\n  if (!monthlySummary[parentTable]) {\n    monthlySummary[parentTable] = {\n      parentTable: parentTable,\n      totalRecords: 0,\n      // Add other fields you want to aggregate\n    };\n  }\n  monthlySummary[parentTable].totalRecords++;\n  \n  // Aggregate for master summary (all-time data)\n  if (!masterSummary[parentTable]) {\n    masterSummary[parentTable] = {\n      parentTable: parentTable,\n      totalRecords: 0,\n      // Add other fields you want to aggregate\n    };\n  }\n  masterSummary[parentTable].totalRecords++;\n}\n\n// Convert aggregation objects to arrays\nconst monthlyResults = Object.values(monthlySummary);\nconst masterResults = Object.values(masterSummary);\n\n// Return both summaries\nreturn [\n  {\n    json: {\n      monthlySummary: monthlyResults,\n      masterSummary: masterResults,\n      baseId: config.baseId,\n      monthlySummaryTableId: config.monthlySummaryTableId,\n      masterSummaryTableId: config.masterSummaryTableId,\n      timestamp: new Date().toISOString()\n    }\n  }\n];"
+      },
+      "id": "73696bd7-f3cf-46f7-83cc-2e7f32869260",
+      "name": "Aggregate All Data for Summaries",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2912,
+        72
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.baseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.monthlySummaryTableId }}"
+        },
+        "options": {}
+      },
+      "id": "eadc8854-557b-4d43-bb0e-44ce4760776a",
+      "name": "Update Monthly Summary",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        3136,
+        72
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.baseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.masterSummaryTableId }}"
+        },
+        "options": {}
+      },
+      "id": "b6c51a65-4a34-46be-8fbb-54b8d6f131bf",
+      "name": "Update Master Summary",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        3360,
+        72
+      ]
+    }
+  ],
+  "connections": {
+    "Every Sunday": {
+      "main": [
+        [
+          {
+            "node": "Workflow Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Workflow Configuration": {
+      "main": [
+        [
+          {
+            "node": "Get Week 3 Data",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Parent Table List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Week 3 Data": {
+      "main": [
+        [
+          {
+            "node": "Update Week 4 with Week 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Week 2 Data": {
+      "main": [
+        [
+          {
+            "node": "Update Week 3 with Week 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Week 1 Data": {
+      "main": [
+        [
+          {
+            "node": "Update Week 2 with Week 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Week 1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate All Data for Summaries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Monthly Summary": {
+      "main": [
+        [
+          {
+            "node": "Update Master Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Parent Table List": {
+      "main": [
+        [
+          {
+            "node": "Process Single Parent Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Single Parent Table": {
+      "main": [
+        [
+          {
+            "node": "Get Week 4 Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Week 4 Data": {
+      "main": [
+        [
+          {
+            "node": "Archive Week 4 to Archive Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Archive Week 4 to Archive Table": {
+      "main": [
+        [
+          {
+            "node": "Get Week 3 Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Week 4 with Week 3": {
+      "main": [
+        [
+          {
+            "node": "Clear Week 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Week 3": {
+      "main": [
+        [
+          {
+            "node": "Get Week 2 Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Week 3 with Week 2": {
+      "main": [
+        [
+          {
+            "node": "Clear Week 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Week 2": {
+      "main": [
+        [
+          {
+            "node": "Get Week 1 Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Week 2 with Week 1": {
+      "main": [
+        [
+          {
+            "node": "Clear Week 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate All Data for Summaries": {
+      "main": [
+        [
+          {
+            "node": "Update Monthly Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "pinData": {},
+  "triggerCount": 0,
+  "meta": null
+}
